@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assistente de Recomendações Agrícolas</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #2e7d32, #4caf50);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+
+        header {
+            background: #1b5e20;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2rem;
+            margin-bottom: 5px;
+        }
+
+        .chat-container {
+            padding: 20px;
+            min-height: 400px;
+        }
+
+        .chat-messages {
+            max-height: 400px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            background: #f9f9f9;
+        }
+
+        .message {
+            margin: 10px 0;
+            padding: 12px;
+            border-radius: 10px;
+            line-height: 1.5;
+        }
+
+        .bot-message {
+            background: #e8f5e9;
+            border-left: 4px solid #4caf50;
+        }
+
+        .user-message {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            text-align: right;
+        }
+
+        .recomendacao {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+            margin: 15px 0;
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .input-section {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .botoes-opcoes {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .btn {
+            padding: 12px 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-cultura {
+            background: #4caf50;
+            color: white;
+        }
+
+        .btn-cultura:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+        }
+
+        .btn-problema {
+            background: #ff9800;
+            color: white;
+        }
+
+        .btn-problema:hover {
+            background: #f57c00;
+            transform: translateY(-2px);
+        }
+
+        .btn-reiniciar {
+            background: #2196f3;
+            color: white;
+            padding: 10px 20px;
+        }
+
+        .btn-reiniciar:hover {
+            background: #1976d2;
+        }
+
+        footer {
+            background: #f5f5f5;
+            text-align: center;
+            padding: 15px;
+            color: #666;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        @media (max-width: 600px) {
+            .botoes-opcoes {
+                grid-template-columns: 1fr;
+            }
+
+            body {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>🌱 Assistente Agrícola</h1>
+            <p>Sistema de recomendações de defensivos</p>
+        </header>
+
+        <div class="chat-container">
+            <div class="chat-messages" id="chatMessages">
+                <!-- Mensagens aparecem aqui automaticamente -->
+            </div>
+
+            <div class="input-section" id="inputSection">
+                <!-- Botões aparecem aqui automaticamente -->
+            </div>
+        </div>
+
+        <footer>
+            <p>Projeto de Extensão - Curso de ADS</p>
+        </footer>
+    </div>
+
+    <script>
+        // Base de dados de produtos
+        const produtos = [
+            {
+                id: 1,
+                nome: "Insecticida Alpha",
+                culturas: ["milho", "soja"],
+                problemas: ["lagarta", "percevejo"],
+                dose: "200-300 ml/ha",
+                observacao: "Aplicar no final da tarde. Carência: 21 dias.",
+                modo_acao: "Contato e ingestão"
+            },
+            {
+                id: 2,
+                nome: "Fungicida Beta",
+                culturas: ["soja", "cafe"],
+                problemas: ["ferrugem", "mancha foliar"],
+                dose: "400-500 ml/ha",
+                observacao: "Aplicar preventivamente. Carência: 30 dias.",
+                modo_acao: "Sistêmico"
+            },
+            {
+                id: 3,
+                nome: "Herbicida Gamma",
+                culturas: ["milho", "soja"],
+                problemas: ["plantas daninhas"],
+                dose: "2-3 L/ha",
+                observacao: "Aplicar em pré-emergência. Evitar dias chuvosos.",
+                modo_acao: "Seletivo"
+            },
+            {
+                id: 4,
+                nome: "Acaricida Delta",
+                culturas: ["cafe", "citros"],
+                problemas: ["ácaro"],
+                dose: "500-600 ml/ha",
+                observacao: "Aplicar com bom volume de calda. Carência: 15 dias.",
+                modo_acao: "Contato"
+            }
+        ];
+
+        // Estado da conversa
+        let estado = {
+            step: 0,
+            cultura: '',
+            problema: ''
+        };
+
+        // Elementos da página
+        const chatMessages = document.getElementById('chatMessages');
+        const inputSection = document.getElementById('inputSection');
+
+        // Iniciar conversa quando a página carrega
+        window.onload = function () {
+            iniciarConversa();
+        };
+
+        // Iniciar conversa
+        function iniciarConversa() {
+            addMensagemBot("🌿 <strong>Bem-vindo ao Assistente Agrícola!</strong><br>Vou ajudar você a encontrar o defensivo ideal.");
+
+            setTimeout(() => {
+                perguntarCultura();
+            }, 1000);
+        }
+
+        // Adicionar mensagem do bot
+        function addMensagemBot(texto) {
+            const mensagemDiv = document.createElement('div');
+            mensagemDiv.className = 'message bot-message';
+            mensagemDiv.innerHTML = texto;
+            chatMessages.appendChild(mensagemDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Adicionar mensagem do usuário
+        function addMensagemUsuario(texto) {
+            const mensagemDiv = document.createElement('div');
+            mensagemDiv.className = 'message user-message';
+            mensagemDiv.textContent = texto;
+            chatMessages.appendChild(mensagemDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Perguntar cultura
+        function perguntarCultura() {
+            addMensagemBot("🌾 <strong>Para qual cultura?</strong><br>Selecione uma opção:");
+
+            const botoes = [
+                { texto: "🌽 Milho", valor: "milho" },
+                { texto: "🌱 Soja", valor: "soja" },
+                { texto: "☕ Café", valor: "cafe" },
+                { texto: "🔍 Outra", valor: "outra" }
+            ];
+
+            criarBotoes(botoes, selecionarCultura);
+        }
+
+        // Selecionar cultura
+        function selecionarCultura(cultura) {
+            addMensagemUsuario(cultura === 'outra' ? 'Outra cultura' : cultura);
+            estado.cultura = cultura;
+            estado.step = 1;
+
+            setTimeout(() => {
+                perguntarProblema();
+            }, 500);
+        }
+
+        // Perguntar problema
+        function perguntarProblema() {
+            addMensagemBot("🐛 <strong>Qual o problema principal?</strong><br>Selecione uma opção:");
+
+            const botoes = [
+                { texto: "🐛 Lagarta", valor: "lagarta" },
+                { texto: "🪲 Percevejo", valor: "percevejo" },
+                { texto: "🍂 Ferrugem", valor: "ferrugem" },
+                { texto: "🍁 Doença Foliar", valor: "doença foliar" },
+                { texto: "🕷️ Ácaro", valor: "ácaro" },
+                { texto: "🌿 Plantas Daninhas", valor: "plantas daninhas" }
+            ];
+
+            criarBotoes(botoes, selecionarProblema);
+        }
+
+        // Selecionar problema
+        function selecionarProblema(problema) {
+            addMensagemUsuario(problema);
+            estado.problema = problema;
+            estado.step = 2;
+
+            setTimeout(() => {
+                gerarRecomendacao();
+            }, 500);
+        }
+
+        // Gerar recomendação
+        function gerarRecomendacao() {
+            const recomendacoes = produtos.filter(produto =>
+                (produto.culturas.includes(estado.cultura) || estado.cultura === "outra") &&
+                produto.problemas.includes(estado.problema)
+            );
+
+            if (recomendacoes.length === 0) {
+                addMensagemBot(`
+                    ❌ <strong>Nenhuma recomendação específica encontrada</strong><br><br>
+                    Para <strong>${estado.cultura}</strong> com <strong>${estado.problema}</strong>, 
+                    consulte nosso técnico especializado.<br><br>
+                    📞 <strong>Entre em contato:</strong> (11) 99999-9999<br>
+                    🕒 <strong>Horário:</strong> Seg-Sex: 8h-18h
+                `);
+            } else {
+                let mensagem = `✅ <strong>RECOMENDAÇÕES PARA ${estado.cultura.toUpperCase()} - ${estado.problema.toUpperCase()}</strong><br><br>`;
+
+                recomendacoes.forEach(produto => {
+                    mensagem += `
+                        <div class="recomendacao">
+                            <strong>${produto.nome}</strong><br>
+                            💊 <strong>Dose:</strong> ${produto.dose}<br>
+                            🔬 <strong>Modo de ação:</strong> ${produto.modo_acao}<br>
+                            📝 <strong>Observações:</strong> ${produto.observacao}
+                        </div>
+                    `;
+                });
+
+                addMensagemBot(mensagem);
+            }
+
+            setTimeout(() => {
+                mostrarBotaoReiniciar();
+            }, 1000);
+        }
+
+        // Criar botões de opção
+        function criarBotoes(opcoes, callback) {
+            inputSection.innerHTML = '';
+
+            const botoesDiv = document.createElement('div');
+            botoesDiv.className = 'botoes-opcoes';
+
+            opcoes.forEach(opcao => {
+                const botao = document.createElement('button');
+                botao.className = `btn ${callback === selecionarCultura ? 'btn-cultura' : 'btn-problema'}`;
+                botao.textContent = opcao.texto;
+                botao.onclick = () => callback(opcao.valor);
+                botoesDiv.appendChild(botao);
+            });
+
+            inputSection.appendChild(botoesDiv);
+        }
+
+        // Mostrar botão reiniciar
+        function mostrarBotaoReiniciar() {
+            const botaoReiniciar = document.createElement('button');
+            botaoReiniciar.className = 'btn btn-reiniciar';
+            botaoReiniciar.textContent = '🔄 Fazer Nova Consulta';
+            botaoReiniciar.onclick = reiniciarConversa;
+
+            inputSection.innerHTML = '';
+            inputSection.appendChild(botaoReiniciar);
+        }
+
+        // Reiniciar conversa
+        function reiniciarConversa() {
+            estado = { step: 0, cultura: '', problema: '' };
+            inputSection.innerHTML = '';
+
+            addMensagemBot("🔄 <strong>Iniciando nova consulta...</strong>");
+
+            setTimeout(() => {
+                perguntarCultura();
+            }, 1000);
+        }
+    </script>
+</body>
+
+</html>
